@@ -1,32 +1,1218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Highway Racer</title>
-    <link rel="stylesheet" href="css/g1.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DOCTOR QUEST: MEDICAL SCHOOL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;user-select:none;-webkit-tap-highlight-color:transparent}
+:root{
+--blue:#3498db;--green:#2ecc71;--red:#e74c3c;--yellow:#f1c40f;
+--purple:#9b59b6;--cyan:#00e5ff;--gold:#f0c040;
+--bg:#07070f;--surface:#0e0e1a;--text:#c8c8d8;
+--wall:#1a1a30;--wall2:#22223a;
+--mono:'Share Tech Mono',monospace;--display:'VT323',monospace;
+}
+body{overflow:hidden;background:var(--bg);font-family:var(--mono);color:var(--text);touch-action:manipulation}
+canvas{display:block;image-rendering:pixelated}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;font-family:var(--mono)}
+/* HUD - Mobile optimized */
+.hud{position:absolute;background:rgba(7,7,15,0.92);border:1px solid #1e1e38;
+padding:4px 8px;border-radius:3px;pointer-events:none;z-index:100;
+font-size:11px;letter-spacing:1px;backdrop-filter:blur(6px)}
+#hYear{top:8px;left:8px;color:#aaa}
+#hLevel{top:8px;left:80px;color:#aaa}
+#hScore{top:8px;right:50px;color:var(--gold)}
+.prog-wrap{position:absolute;top:32px;left:8px;width:160px;height:4px;
+background:#111;border:1px solid #222;border-radius:2px;z-index:100}
+.prog-fill{height:100%;border-radius:2px;transition:width .4s;
+background:linear-gradient(90deg,var(--blue),var(--cyan))}
+.q-dots{position:absolute;top:42px;left:8px;display:flex;gap:5px;z-index:100}
+.q-dot{width:8px;height:8px;border-radius:50%;border:1px solid #334;background:#111;transition:all .3s}
+.q-dot.lit{background:var(--green);border-color:var(--green);box-shadow:0 0 6px var(--green)}
+/* Narrator */
+#narrator{position:absolute;top:12%;left:50%;transform:translateX(-50%);
+background:rgba(10,10,20,0.94);border:1px solid #2a2a50;border-radius:4px;
+padding:6px 16px;font-style:italic;font-size:12px;opacity:0;
+transition:opacity .4s;z-index:99;pointer-events:none;max-width:85%;text-align:center;
+color:#8080b0;box-shadow:0 0 20px rgba(0,200,255,0.1)}
+/* Pause button */
+#pauseBtn{position:absolute;top:8px;right:8px;width:32px;height:32px;
+background:rgba(14,14,26,0.92);border:1px solid #1e1e38;border-radius:50%;
+color:#888;font-size:11px;display:flex;align-items:center;justify-content:center;
+pointer-events:auto;z-index:200;cursor:pointer;transition:all .2s}
+#pauseBtn:hover{color:#ccc;border-color:#444}
+/* Overlay panels */
+.overlay{position:fixed;top:0;left:0;width:100%;height:100%;
+background:rgba(5,5,12,0.98);display:flex;flex-direction:column;
+align-items:center;justify-content:center;z-index:300;
+pointer-events:none;opacity:0;transition:opacity .35s}
+.overlay.active{pointer-events:auto;opacity:1}
+/* Question panel - Mobile optimized */
+#qPanel{z-index:400}
+.q-box{background:#0b0b18;border:1px solid #252545;border-radius:8px;
+padding:24px;max-width:92%;width:94%;max-height:88vh;overflow-y:auto;
+box-shadow:0 0 50px rgba(0,0,0,.9)}
+.q-title{font-family:var(--display);font-size:1.6rem;color:var(--cyan);
+text-align:center;margin-bottom:16px;letter-spacing:2px}
+.q-year-badge{display:inline-block;background:rgba(52,152,219,.15);
+border:1px solid var(--blue);border-radius:3px;padding:2px 8px;
+font-size:10px;color:var(--blue);letter-spacing:2px;margin-bottom:14px}
+.q-text{font-size:14px;line-height:1.7;margin-bottom:18px;text-align:center;color:#ccc}
+.q-opts{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.q-btn{background:rgba(12,12,22,0.92);border:1px solid #222240;color:#888899;
+padding:10px 16px;font-family:var(--mono);font-size:12px;letter-spacing:.5px;
+border-radius:4px;cursor:pointer;transition:all .18s;width:100%;text-align:left}
+.q-btn:hover{background:#14142a;border-color:#3a3a60;color:#bbbbd0;transform:translateX(3px)}
+.q-btn.correct{background:rgba(46,204,113,.2);border-color:var(--green);color:#aaffbb}
+.q-btn.wrong{background:rgba(231,76,60,.2);border-color:var(--red);color:#ffaaaa}
+.q-feedback{font-size:13px;text-align:center;margin-top:10px;min-height:20px;font-weight:bold}
+#skipBtn{display:block;margin:12px auto 0;background:#0d0d1e;border:1px solid #1e1e3e;
+color:#5555aa;padding:8px 24px;font-family:var(--mono);font-size:.8rem;
+letter-spacing:2px;border-radius:4px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+#skipBtn:hover{border-color:var(--blue);color:#8888cc}
+.skip-bar-wrap{width:100%;height:2.5px;background:#111;border-radius:2px;margin-top:6px;overflow:hidden}
+.skip-bar{height:100%;background:var(--blue);border-radius:2px;transition:width .1s linear}
+/* Pause menu - Mobile optimized */
+#pauseMenu h2{font-family:var(--display);font-size:clamp(2rem,6vw,3.2rem);color:var(--blue);letter-spacing:2px;margin-bottom:14px}
+.menu-btn{background:rgba(12,12,22,0.92);border:1px solid #2a2a4a;color:var(--text);
+padding:12px 40px;font-family:var(--mono);font-size:.85rem;letter-spacing:2px;
+border-radius:4px;cursor:pointer;transition:all .2s;width:85%;text-align:center;
+text-transform:uppercase;margin:5px 0}
+.menu-btn:hover{background:#14142a;border-color:var(--blue);color:#dde;transform:translateY(-2px)}
+.menu-btn.danger{border-color:#2a1010;color:#ff9999}
+.menu-btn.danger:hover{border-color:var(--red);background:#1a0a0a}
+/* Title screen - Mobile optimized */
+#title{position:absolute;top:0;left:0;width:100%;height:100%;
+background:radial-gradient(ellipse at 50% 60%,#0c1824 0%,var(--bg) 70%);
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+z-index:1000;transition:opacity .6s}
+.t-pre{font-family:var(--display);font-size:clamp(.8rem,2.5vw,1.1rem);color:#2a7a7a;
+letter-spacing:5px;margin-bottom:8px;animation:pulse 4s infinite}
+#mainTitle{font-family:var(--display);font-size:clamp(2.5rem,12vw,6rem);color:var(--cyan);
+letter-spacing:3px;text-align:center;
+text-shadow:0 0 25px rgba(0,229,255,.5),0 0 50px rgba(0,229,255,.25);
+line-height:1;margin-bottom:6px;animation:glow 3s infinite}
+.t-sub{font-family:var(--mono);font-size:11px;color:#2a7070;letter-spacing:3px;margin-bottom:36px}
+.t-btns{display:flex;flex-direction:column;align-items:center;gap:10px}
+.t-btn{background:rgba(12,12,22,0.92);border:1px solid #1e1e3e;color:#78cccc;
+padding:12px 44px;font-family:var(--mono);font-size:.85rem;letter-spacing:2.5px;
+border-radius:4px;cursor:pointer;transition:all .25s;width:88%;text-align:center;
+text-transform:uppercase}
+.t-btn:hover{background:#14141e;border-color:var(--cyan);color:#ddffff;transform:scale(1.02);
+box-shadow:0 0 14px rgba(0,229,255,.22)}
+.t-btn.primary{border-color:#1a5060;color:#aaffe0}
+.t-btn.lang{border-color:#3a3a7a;color:#ccccff}
+#credits{position:absolute;bottom:14px;font-size:10px;color:#1e1e2e;letter-spacing:2px}
+/* Year complete - Mobile optimized */
+#yearComp{z-index:450}
+.yc-title{font-family:var(--display);font-size:clamp(2rem,7vw,4rem);
+color:var(--green);letter-spacing:2px;text-align:center;
+text-shadow:0 0 25px rgba(46,204,113,.6);margin-bottom:14px}
+.yc-text{font-family:var(--mono);font-size:15px;color:#aaa;letter-spacing:1.5px;
+text-align:center;max-width:90%;line-height:1.6;margin-bottom:30px}
+.yc-btn{background:rgba(12,12,22,0.92);border:1px solid #2a4a2a;color:var(--green);
+padding:14px 48px;font-family:var(--mono);font-size:.95rem;letter-spacing:2.5px;
+border-radius:4px;cursor:pointer;transition:all .3s;text-transform:uppercase;
+box-shadow:0 0 20px rgba(46,204,113,.25);width:85%}
+.yc-btn:hover{background:#0e1e0e;border-color:var(--green);color:#fff;transform:scale(1.04)}
+/* Certificate - Mobile optimized */
+#certScreen{z-index:500;background:linear-gradient(135deg,#10101e,#07070f)}
+.cert-wrap{background:#f5f0e8;border:6px solid #c0a020;border-radius:6px;
+width:min(780px,95%);padding:30px 40px;text-align:center;
+box-shadow:0 0 50px rgba(0,229,255,.4),0 0 100px rgba(52,152,219,.2);
+position:relative;overflow:hidden}
+.cert-border{position:absolute;inset:10px;border:2px solid #c0a020;border-radius:4px;pointer-events:none}
+.cert-corner{position:absolute;width:40px;height:40px;border-color:#c0a020;border-style:solid}
+.cert-corner.tl{top:14px;left:14px;border-width:2px 0 0 2px}
+.cert-corner.tr{top:14px;right:14px;border-width:2px 2px 0 0}
+.cert-corner.bl{bottom:14px;left:14px;border-width:0 0 2px 2px}
+.cert-corner.br{bottom:14px;right:14px;border-width:0 2px 2px 0}
+.cert-logo{font-size:42px;margin-bottom:4px}
+.cert-school{font-family:var(--display);font-size:1.4rem;color:#1a3a5a;letter-spacing:3px;margin-bottom:6px}
+.cert-presents{font-family:var(--mono);font-size:10px;color:#666;letter-spacing:2.5px;margin-bottom:4px}
+.cert-name-area{border-bottom:2px solid #c0a020;border-top:2px solid #c0a020;
+padding:10px 0;margin:14px 0}
+#certName{font-family:var(--display);font-size:2rem;color:#1a3a5a;letter-spacing:2.5px}
+.cert-title-line{font-family:var(--display);font-size:1.4rem;color:#1a6a3a;letter-spacing:2.5px;margin:6px 0}
+.cert-body{font-family:var(--mono);font-size:10px;color:#444;line-height:1.6;
+margin:14px auto;max-width:520px;letter-spacing:.5px}
+.cert-date{font-family:var(--mono);font-size:10px;color:#666;letter-spacing:1.5px;margin-top:16px}
+.cert-sigs{display:flex;flex-direction:column;gap:12px;margin-top:16px;padding-top:10px}
+.cert-sig{text-align:center}
+.cert-sig-line{border-bottom:1px solid #999;width:140px;margin:0 auto 4px}
+.cert-sig-title{font-family:var(--mono);font-size:9px;color:#666;letter-spacing:1px}
+.cert-btns{display:flex;flex-direction:column;gap:10px;margin-top:24px;justify-content:center}
+.c-btn{background:rgba(12,12,22,0.92);border:1px solid #2a2a4a;color:var(--cyan);
+padding:10px 28px;font-family:var(--mono);font-size:.8rem;letter-spacing:2px;
+border-radius:4px;cursor:pointer;transition:all .2s;text-transform:uppercase}
+.c-btn:hover{background:#14142a;border-color:var(--cyan);color:#fff;transform:translateY(-2px)}
+.c-btn.dl{background:var(--green);border-color:var(--green);color:#fff}
+.c-btn.dl:hover{background:#27ae60;border-color:#27ae60}
+/* D-pad mobile - ENLARGED for better touch */
+#dpad{position:absolute;bottom:20px;right:16px;width:160px;height:160px;
+display:block;z-index:150;pointer-events:auto}
+.dp{position:absolute;width:52px;height:52px;background:rgba(12,12,24,0.92);
+border:2px solid #2a2a4a;border-radius:8px;display:flex;align-items:center;
+justify-content:center;font-size:24px;color:#6699cc;cursor:pointer;
+transition:all .1s;user-select:none;-webkit-user-select:none;
+box-shadow:0 2px 8px rgba(0,0,0,0.4)}
+.dp:active{background:#1a1a30;color:#aaccff;border-color:#3a5a8a;transform:scale(0.95)}
+#dpU{top:0;left:50%;transform:translateX(-50%)}
+#dpD{bottom:0;left:50%;transform:translateX(-50%)}
+#dpL{left:0;top:50%;transform:translateY(-50%)}
+#dpR{right:0;top:50%;transform:translateY(-50%)}
+/* Scanlines */
+#scanlines{position:absolute;top:0;left:0;width:100%;height:100%;
+background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.055) 2px,rgba(0,0,0,.055) 4px);
+pointer-events:none;z-index:600}
+@keyframes pulse{0%,100%{opacity:.85}50%{opacity:1}}
+@keyframes glow{
+0%,100%{text-shadow:0 0 25px rgba(0,229,255,.45),0 0 50px rgba(0,229,255,.2)}
+50%{text-shadow:0 0 40px rgba(0,229,255,.7),0 0 80px rgba(0,229,255,.35)}
+}
+@keyframes pop{0%{transform:scale(.5);opacity:0}80%{transform:scale(1.06)}100%{transform:scale(1);opacity:1}}
+@keyframes ripple{0%{transform:scale(.8);opacity:.8}100%{transform:scale(2.5);opacity:0}}
+.hidden{display:none!important}
+/* Mobile-specific adjustments */
+@media(max-width:480px){
+#mainTitle{font-size:clamp(2.2rem,14vw,4.5rem);letter-spacing:2px}
+.q-box{padding:20px}
+.q-title{font-size:1.4rem}
+.q-text{font-size:13px}
+.q-btn{padding:9px 14px;font-size:11px}
+#hYear,#hLevel,#hScore{font-size:10px}
+.prog-wrap{top:28px;left:6px;width:140px;height:3.5px}
+.q-dots{top:38px;left:6px;gap:4px}
+.q-dot{width:7px;height:7px}
+#dpad{width:180px;height:180px;bottom:16px;right:12px}
+.dp{width:58px;height:58px;font-size:26px}
+#certName{font-size:1.6rem}
+.cert-school{font-size:1.2rem}
+.cert-title-line{font-size:1.2rem}
+.yc-btn{padding:12px 40px;font-size:.85rem}
+.menu-btn{padding:11px 36px;font-size:.8rem}
+.t-btn{padding:11px 40px;font-size:.8rem}
+}
+</style>
 </head>
 <body>
-   
-    <div class="game-container">
-        <div id="road">
-            <div class="side-line left"></div>
-            <div class="side-line right"></div>
-            <div id="player-car"></div>
-            <div class="game-title">HIGHWAY RACER</div>
-        </div>
-        <div id="score-display">Score: 0</div>
-        <div id="game-over">
-            <div>GAME OVER</div>
-            <div id="final-score">Score: 0</div>
-            <button id="restart-btn">PLAY AGAIN</button>
-        </div>
-        <div class="controls">
-            <div class="arrow" id="left-btn">←</div>
-            <div class="arrow" id="right-btn">→</div>
-        </div>
-    </div>
-
-    <script src="g1.js"></script>
+<canvas id="c"></canvas>
+<div id="ui">
+<div id="hYear" class="hud">YEAR: <span id="vYear">1</span>/7</div>
+<div id="hLevel" class="hud">LEVEL: <span id="vLevel">1</span>/7</div>
+<div id="hScore" class="hud">SCORE: <span id="vScore">0</span></div>
+<div class="prog-wrap"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+<div class="q-dots" id="qDots">
+<div class="q-dot" id="d0"></div>
+<div class="q-dot" id="d1"></div>
+<div class="q-dot" id="d2"></div>
+</div>
+<div id="narrator"></div>
+<button id="pauseBtn">❙❙</button>
+<!-- Pause Menu -->
+<div class="overlay" id="pauseMenu">
+<h2 id="pTitle">PAUSED</h2>
+<button class="menu-btn" id="resumeBtn">RESUME</button>
+<button class="menu-btn" id="rstBtn">RESTART LEVEL</button>
+<button class="menu-btn danger" id="quitBtn">QUIT</button>
+</div>
+<!-- Question Panel -->
+<div class="overlay" id="qPanel">
+<div class="q-box">
+<div class="q-title" id="qTitle">MEDICAL QUESTION</div>
+<div style="text-align:center"><span class="q-year-badge" id="qBadge">YEAR 1 — ANATOMY</span></div>
+<div class="q-text" id="qText"></div>
+<div class="q-opts" id="qOpts"></div>
+<div class="q-feedback" id="qFb"></div>
+<button id="skipBtn">SKIP (10s)</button>
+<div class="skip-bar-wrap"><div class="skip-bar" id="skipBar" style="width:100%"></div></div>
+</div>
+</div>
+<!-- Year Complete -->
+<div class="overlay" id="yearComp">
+<div class="yc-title" id="ycTitle">YEAR 1 COMPLETE!</div>
+<div class="yc-text" id="ycText"></div>
+<button class="yc-btn" id="nextYrBtn">CONTINUE</button>
+</div>
+<!-- Certificate -->
+<div class="overlay" id="certScreen">
+<div class="cert-wrap">
+<div class="cert-border"></div>
+<div class="cert-corner tl"></div><div class="cert-corner tr"></div>
+<div class="cert-corner bl"></div><div class="cert-corner br"></div>
+<div class="cert-logo">⚕️</div>
+<div class="cert-school" id="certSchool">DOCTOR QUEST MEDICAL SCHOOL</div>
+<div class="cert-presents" id="certPresents">THIS CERTIFIES THAT</div>
+<div class="cert-name-area"><div id="certName">DR. [NAME]</div></div>
+<div class="cert-title-line" id="certTL">IS OFFICIALLY A DOCTOR OF MEDICINE</div>
+<div class="cert-body" id="certBody">
+Having successfully completed seven years of rigorous medical education encompassing anatomy, physiology, biochemistry, pathology, microbiology, immunology, pharmacology, clinical medicine, and surgical sciences — and having demonstrated mastery in answering hundreds of medical examination questions across all disciplines of modern medicine.
+</div>
+<div class="cert-date" id="certDate"></div>
+<div class="cert-sigs">
+<div class="cert-sig"><div class="cert-sig-line"></div><div class="cert-sig-title" id="sigDean">DEAN OF MEDICINE</div></div>
+<div class="cert-sig"><div class="cert-sig-line"></div><div class="cert-sig-title" id="sigReg">MEDICAL REGISTRAR</div></div>
+</div>
+<div class="cert-btns">
+<button class="c-btn dl" id="dlBtn">SAVE CERTIFICATE</button>
+<button class="c-btn" id="playAgainBtn">PLAY AGAIN</button>
+</div>
+</div>
+</div>
+<!-- D-Pad - ENLARGED for mobile -->
+<div id="dpad">
+<div class="dp" id="dpU">▲</div>
+<div class="dp" id="dpD">▼</div>
+<div class="dp" id="dpL">◀</div>
+<div class="dp" id="dpR">▶</div>
+</div>
+</div>
+<!-- Title Screen -->
+<div id="title">
+<div class="t-pre" id="tPre">MEDICAL SCHOOL SIMULATION</div>
+<h1 id="mainTitle">DOCTOR QUEST</h1>
+<div class="t-sub" id="tSub">7 YEARS · 7 LEVELS · 3 QUESTIONS EACH</div>
+<div class="t-btns">
+<button class="t-btn primary" id="startBtn">BEGIN MEDICAL SCHOOL</button>
+<button class="t-btn lang" id="langBtn">LANGUAGE: ENGLISH</button>
+<button class="t-btn" id="howBtn">HOW TO PLAY</button>
+</div>
+<div id="credits">GRADUATES: <span id="gradCount">0</span></div>
+</div>
+<div id="scanlines"></div>
+<script>
+// ============================================================
+// COMPREHENSIVE MEDICAL QUESTION DATABASE (bilingual, 7 years)
+// ============================================================
+const DB = {
+year1:{
+label:{en:"YEAR 1 — ANATOMY & PHYSIOLOGY",fr:"ANNÉE 1 — ANATOMIE & PHYSIOLOGIE"},
+qs:[
+{en:"What is the largest organ in the human body?",fr:"Quel est le plus grand organe du corps humain ?",a:["Skin","Liver","Heart","Lung"],ca:0},
+{en:"How many bones are in the adult human body?",fr:"Combien d'os y a-t-il dans le corps humain adulte ?",a:["206","300","172","250"],ca:0},
+{en:"Which blood type is the universal donor?",fr:"Quel groupe sanguin est le donneur universel ?",a:["O-","A+","B-","AB+"],ca:0},
+{en:"What is the normal resting heart rate for adults?",fr:"Quelle est la fréquence cardiaque normale au repos ?",a:["60-100 bpm","40-60 bpm","110-130 bpm","80-150 bpm"],ca:0},
+{en:"Which organ produces insulin?",fr:"Quel organe produit l'insuline ?",a:["Pancreas","Liver","Kidney","Spleen"],ca:0},
+{en:"What is the longest bone in the human body?",fr:"Quel est l'os le plus long du corps humain ?",a:["Femur","Tibia","Fibula","Humerus"],ca:0},
+{en:"How many chambers does the human heart have?",fr:"Combien de cavités a le cœur humain ?",a:["4","2","3","6"],ca:0},
+{en:"What is the functional unit of the kidney?",fr:"Quelle est l'unité fonctionnelle du rein ?",a:["Nephron","Neuron","Alveolus","Hepatocyte"],ca:0},
+{en:"Which gas do red blood cells primarily carry?",fr:"Quel gaz les globules rouges transportent-ils principalement ?",a:["Oxygen","Carbon dioxide","Nitrogen","Argon"],ca:0},
+{en:"What is the term for the double membrane surrounding the heart?",fr:"Quel est le terme pour la double membrane entourant le cœur ?",a:["Pericardium","Pleura","Peritoneum","Dura mater"],ca:0},
+{en:"What protein carries oxygen in red blood cells?",fr:"Quelle protéine transporte l'oxygène dans les globules rouges ?",a:["Hemoglobin","Albumin","Fibrinogen","Myosin"],ca:0},
+{en:"Which part of the brain controls breathing?",fr:"Quelle partie du cerveau contrôle la respiration ?",a:["Medulla oblongata","Cerebellum","Cerebrum","Thalamus"],ca:0},
+{en:"How many pairs of cranial nerves exist?",fr:"Combien de paires de nerfs crâniens existent-ils ?",a:["12","10","8","14"],ca:0},
+{en:"What is the name of the protein in muscle that causes contraction?",fr:"Comment s'appelle la protéine musculaire qui provoque la contraction ?",a:["Actin & myosin","Collagen","Keratin","Elastin"],ca:0},
+{en:"Which structure connects muscle to bone?",fr:"Quelle structure relie le muscle à l'os ?",a:["Tendon","Ligament","Cartilage","Fascia"],ca:0},
+{en:"What is the term for the fluid surrounding the brain and spinal cord?",fr:"Quel est le terme pour le liquide entourant le cerveau et la moelle épinière ?",a:["Cerebrospinal fluid","Lymph","Synovial fluid","Aqueous humor"],ca:0},
+{en:"Which organ produces bile?",fr:"Quel organe produit la bile ?",a:["Liver","Gallbladder","Pancreas","Duodenum"],ca:0},
+{en:"How many lobes does the right lung have?",fr:"Combien de lobes le poumon droit a-t-il ?",a:["3","2","4","1"],ca:0},
+{en:"What is the normal adult respiratory rate?",fr:"Quelle est la fréquence respiratoire normale d'un adulte ?",a:["12-20 per min","5-10 per min","25-35 per min","40-50 per min"],ca:0},
+{en:"Which vitamin is produced by the skin under sunlight?",fr:"Quelle vitamine est produite par la peau sous le soleil ?",a:["Vitamin D","Vitamin C","Vitamin A","Vitamin K"],ca:0},
+{en:"What is the smallest unit of life?",fr:"Quelle est la plus petite unité de vie ?",a:["Cell","Organ","Tissue","Molecule"],ca:0},
+{en:"Which blood vessels carry blood AWAY from the heart?",fr:"Quels vaisseaux sanguins transportent le sang loin du cœur ?",a:["Arteries","Veins","Capillaries","Lymphatics"],ca:0},
+{en:"What is the normal blood pressure reading for adults?",fr:"Quelle est la tension artérielle normale d'un adulte ?",a:["120/80 mmHg","160/100 mmHg","90/60 mmHg","140/90 mmHg"],ca:0},
+{en:"Which part of a neuron receives signals?",fr:"Quelle partie d'un neurone reçoit les signaux ?",a:["Dendrite","Axon","Myelin sheath","Node of Ranvier"],ca:0},
+{en:"What is the pH of normal human blood?",fr:"Quel est le pH du sang humain normal ?",a:["7.35-7.45","6.8-7.2","7.5-8.0","7.0-7.3"],ca:0},
+]
+},
+year2:{
+label:{en:"YEAR 2 — BIOCHEMISTRY & HISTOLOGY",fr:"ANNÉE 2 — BIOCHIMIE & HISTOLOGIE"},
+qs:[
+{en:"What is the powerhouse of the cell?",fr:"Quel est le moteur de la cellule ?",a:["Mitochondria","Nucleus","Ribosome","Golgi apparatus"],ca:0},
+{en:"Which macromolecule carries genetic information?",fr:"Quelle macromolécule porte l'information génétique ?",a:["DNA","RNA","Protein","Lipid"],ca:0},
+{en:"What is the first step of glycolysis?",fr:"Quelle est la première étape de la glycolyse ?",a:["Glucose → Glucose-6-phosphate","Pyruvate → Acetyl-CoA","Fructose-6-P → Fructose-1,6-P","G3P → 1,3-BPG"],ca:0},
+{en:"Which enzyme converts glucose to glucose-6-phosphate in the liver?",fr:"Quelle enzyme convertit le glucose en glucose-6-phosphate dans le foie ?",a:["Glucokinase","Hexokinase","Phosphofructokinase","Aldolase"],ca:0},
+{en:"What is the end product of the Krebs cycle?",fr:"Quel est le produit final du cycle de Krebs ?",a:["CO2, NADH, FADH2","Glucose","Pyruvate","Lactate"],ca:0},
+{en:"Which cells line the alveoli of the lungs?",fr:"Quelles cellules tapissent les alvéoles pulmonaires ?",a:["Type I & II pneumocytes","Hepatocytes","Enterocytes","Keratinocytes"],ca:0},
+{en:"What is the enzyme that unwinds DNA for replication?",fr:"Quelle enzyme déroule l'ADN pour la réplication ?",a:["Helicase","Polymerase","Ligase","Topoisomerase"],ca:0},
+{en:"Which type of collagen is most abundant in skin?",fr:"Quel type de collagène est le plus abondant dans la peau ?",a:["Type I","Type II","Type III","Type IV"],ca:0},
+{en:"What is the main intracellular cation?",fr:"Quel est le principal cation intracellulaire ?",a:["Potassium (K+)","Sodium (Na+)","Calcium (Ca2+)","Magnesium (Mg2+)"],ca:0},
+{en:"Which cells produce antibodies?",fr:"Quelles cellules produisent des anticorps ?",a:["Plasma cells","T lymphocytes","NK cells","Macrophages"],ca:0},
+{en:"What type of tissue forms glands?",fr:"Quel type de tissu forme les glandes ?",a:["Epithelial","Connective","Muscle","Nervous"],ca:0},
+{en:"What is the role of smooth endoplasmic reticulum?",fr:"Quel est le rôle du réticulum endoplasmique lisse ?",a:["Lipid synthesis","Protein synthesis","DNA replication","Mitosis"],ca:0},
+{en:"Which organelle packages and secretes proteins?",fr:"Quel organite emballe et sécrète des protéines ?",a:["Golgi apparatus","Ribosome","Mitochondria","Lysosome"],ca:0},
+{en:"What is the building block of proteins?",fr:"Quel est le composant de base des protéines ?",a:["Amino acids","Nucleotides","Fatty acids","Monosaccharides"],ca:0},
+{en:"Which bond holds the DNA double helix together?",fr:"Quel type de liaison maintient la double hélice de l'ADN ?",a:["Hydrogen bonds","Covalent bonds","Ionic bonds","Van der Waals"],ca:0},
+{en:"How many ATP molecules are produced by complete glucose oxidation?",fr:"Combien de molécules d'ATP la dégradation complète du glucose produit-elle ?",a:["30-32 ATP","2 ATP","8 ATP","50 ATP"],ca:0},
+{en:"What is the primary role of albumin in the blood?",fr:"Quel est le rôle principal de l'albumine dans le sang ?",a:["Maintain oncotic pressure","Carry oxygen","Clotting factor","Fight infection"],ca:0},
+{en:"Which cells are the primary phagocytes of the CNS?",fr:"Quelles cellules sont les phagocytes primaires du SNC ?",a:["Microglia","Astrocytes","Oligodendrocytes","Schwann cells"],ca:0},
+{en:"What is the process by which cells eat large particles?",fr:"Quel est le processus par lequel les cellules ingèrent de grandes particules ?",a:["Phagocytosis","Pinocytosis","Exocytosis","Endocytosis"],ca:0},
+{en:"Which layer of skin contains melanocytes?",fr:"Quelle couche de peau contient les mélanocytes ?",a:["Stratum basale","Stratum corneum","Stratum granulosum","Stratum spinosum"],ca:0},
+]
+},
+year3:{
+label:{en:"YEAR 3 — PATHOLOGY & MICROBIOLOGY",fr:"ANNÉE 3 — PATHOLOGIE & MICROBIOLOGIE"},
+qs:[
+{en:"Which bacteria causes tuberculosis?",fr:"Quelle bactérie cause la tuberculose ?",a:["Mycobacterium tuberculosis","Streptococcus pneumoniae","E. coli","Staphylococcus aureus"],ca:0},
+{en:"What is the most common cause of bacterial meningitis in adults?",fr:"Quelle est la cause la plus fréquente de méningite bactérienne chez l'adulte ?",a:["Streptococcus pneumoniae","Neisseria meningitidis","Listeria monocytogenes","E. coli"],ca:0},
+{en:"Which virus causes infectious mononucleosis ('mono')?",fr:"Quel virus cause la mononucléose infectieuse ?",a:["Epstein-Barr virus","CMV","HIV","HSV"],ca:0},
+{en:"What type of hypersensitivity is anaphylaxis?",fr:"Quel type d'hypersensibilité est l'anaphylaxie ?",a:["Type I (IgE-mediated)","Type II","Type III","Type IV"],ca:0},
+{en:"Which tumor marker is elevated in hepatocellular carcinoma?",fr:"Quel marqueur tumoral est élevé dans le carcinome hépatocellulaire ?",a:["Alpha-fetoprotein (AFP)","CEA","PSA","CA-125"],ca:0},
+{en:"What is the hallmark of Alzheimer's disease pathology?",fr:"Quelle est la marque pathologique de la maladie d'Alzheimer ?",a:["Amyloid plaques & tau tangles","Lewy bodies","Prion proteins","Huntingtin protein"],ca:0},
+{en:"Which parasite causes malaria?",fr:"Quel parasite cause le paludisme ?",a:["Plasmodium species","Leishmania","Trypanosoma","Giardia"],ca:0},
+{en:"What is the most virulent species of malaria?",fr:"Quelle est l'espèce de paludisme la plus virulente ?",a:["Plasmodium falciparum","P. vivax","P. malariae","P. ovale"],ca:0},
+{en:"Which cells are targeted by HIV?",fr:"Quelles cellules sont ciblées par le VIH ?",a:["CD4+ T cells","CD8+ T cells","B cells","NK cells"],ca:0},
+{en:"What is the characteristic cell of Hodgkin lymphoma?",fr:"Quelle est la cellule caractéristique du lymphome de Hodgkin ?",a:["Reed-Sternberg cell","Plasma cell","Auer rod","Psammoma body"],ca:0},
+{en:"What type of necrosis is seen in myocardial infarction?",fr:"Quel type de nécrose voit-on dans l'infarctus du myocarde ?",a:["Coagulative","Liquefactive","Caseous","Fat necrosis"],ca:0},
+{en:"Which organism causes Lyme disease?",fr:"Quel organisme cause la maladie de Lyme ?",a:["Borrelia burgdorferi","Rickettsia","Treponema pallidum","Brucella"],ca:0},
+{en:"What is the most common cause of food poisoning?",fr:"Quelle est la cause la plus fréquente d'intoxication alimentaire ?",a:["Staphylococcus aureus","Salmonella","E. coli O157:H7","Listeria"],ca:0},
+{en:"Which cells are destroyed in type 1 diabetes?",fr:"Quelles cellules sont détruites dans le diabète de type 1 ?",a:["Beta cells of islets of Langerhans","Alpha cells","Delta cells","Acinar cells"],ca:0},
+{en:"What is the most common type of lung cancer?",fr:"Quel est le type le plus courant de cancer du poumon ?",a:["Adenocarcinoma","Squamous cell carcinoma","Small cell carcinoma","Large cell carcinoma"],ca:0},
+{en:"Which bacterium causes peptic ulcers?",fr:"Quelle bactérie cause les ulcères peptiques ?",a:["Helicobacter pylori","Clostridium difficile","Campylobacter jejuni","Shigella"],ca:0},
+{en:"What does ARDS stand for?",fr:"Que signifie SDRA ?",a:["Acute Respiratory Distress Syndrome","Acute Renal Dysregulation Syndrome","Adult Respiratory Disease Syndrome","Acute Respiratory Damage Syndrome"],ca:0},
+{en:"Which hepatitis virus is transmitted feco-orally?",fr:"Quel virus de l'hépatite se transmet par voie fécale-orale ?",a:["Hepatitis A","Hepatitis B","Hepatitis C","Hepatitis D"],ca:0},
+{en:"What is the gold standard for diagnosing celiac disease?",fr:"Quel est l'étalon-or pour diagnostiquer la maladie cœliaque ?",a:["Duodenal biopsy","Anti-tTG antibody","Colonoscopy","Stool culture"],ca:0},
+{en:"Which tumor suppressor gene is mutated in most colorectal cancers?",fr:"Quel gène suppresseur de tumeur est muté dans la plupart des cancers colorectaux ?",a:["APC","BRCA1","TP53","RB1"],ca:0},
+]
+},
+year4:{
+label:{en:"YEAR 4 — PHARMACOLOGY & DIAGNOSTICS",fr:"ANNÉE 4 — PHARMACOLOGIE & DIAGNOSTIC"},
+qs:[
+{en:"What does ECG stand for?",fr:"Que signifie ECG/EKG ?",a:["Electrocardiogram","Electro-corticogram","Electro-cardiograph","Echo-cardiogram"],ca:0},
+{en:"Which drug is the antidote for opioid overdose?",fr:"Quel médicament est l'antidote d'un surdosage en opioïdes ?",a:["Naloxone","Flumazenil","Atropine","N-acetylcysteine"],ca:0},
+{en:"What is the antidote for acetaminophen (paracetamol) overdose?",fr:"Quel est l'antidote d'un surdosage en paracétamol ?",a:["N-acetylcysteine","Naloxone","Flumazenil","Vitamin K"],ca:0},
+{en:"Which imaging uses ionizing radiation?",fr:"Quelle imagerie utilise des rayonnements ionisants ?",a:["X-ray (CT)","MRI","Ultrasound","PET scan"],ca:0},
+{en:"What is the mechanism of beta-blockers?",fr:"Quel est le mécanisme d'action des bêta-bloquants ?",a:["Block β-adrenergic receptors","Block α receptors","ACE inhibition","Calcium channel block"],ca:0},
+{en:"Which drug class lowers LDL cholesterol most effectively?",fr:"Quelle classe médicamenteuse abaisse le plus efficacement le LDL ?",a:["Statins","Fibrates","Niacin","Bile acid sequestrants"],ca:0},
+{en:"What test measures HbA1c?",fr:"Quel test mesure l'HbA1c ?",a:["Long-term glucose control","Acute glucose level","Renal function","Liver function"],ca:0},
+{en:"Which drug is first-line for type 2 diabetes?",fr:"Quel médicament est en première ligne pour le diabète de type 2 ?",a:["Metformin","Insulin","Glipizide","Acarbose"],ca:0},
+{en:"What class of drug is amoxicillin?",fr:"Quelle est la classe du médicament amoxicilline ?",a:["Penicillin (beta-lactam)","Macrolide","Cephalosporin","Fluoroquinolone"],ca:0},
+{en:"Which antibiotic is used for MRSA?",fr:"Quel antibiotique est utilisé contre le SARM ?",a:["Vancomycin","Penicillin","Amoxicillin","Ciprofloxacin"],ca:0},
+{en:"What is the mechanism of ACE inhibitors?",fr:"Quel est le mécanisme des inhibiteurs de l'ECA ?",a:["Prevent angiotensin I→II conversion","Block AT1 receptor","Inhibit aldosterone release","Diuretic effect"],ca:0},
+{en:"Which test measures kidney function most accurately?",fr:"Quel test mesure le mieux la fonction rénale ?",a:["GFR/Creatinine clearance","BUN alone","Urine dipstick","Sodium level"],ca:0},
+{en:"What does INR measure?",fr:"Que mesure l'INR ?",a:["Clotting (prothrombin time)","Platelet function","Fibrinolysis","Erythrocyte sedimentation"],ca:0},
+{en:"Which drug reverses benzodiazepine overdose?",fr:"Quel médicament inverse le surdosage aux benzodiazépines ?",a:["Flumazenil","Naloxone","Physostigmine","Atropine"],ca:0},
+{en:"What is the first-line treatment for anaphylaxis?",fr:"Quel est le traitement de première intention de l'anaphylaxie ?",a:["Epinephrine (adrenaline)","Antihistamines","Corticosteroids","Bronchodilators"],ca:0},
+{en:"Which procedure introduces a needle into the subarachnoid space?",fr:"Quelle procédure introduit une aiguille dans l'espace sous-arachnoïdien ?",a:["Lumbar puncture","Bone marrow biopsy","Thoracentesis","Paracentesis"],ca:0},
+{en:"What is the half-life of aspirin's platelet effect?",fr:"Quelle est la durée de l'effet de l'aspirine sur les plaquettes ?",a:["7-10 days (platelet lifespan)","4 hours","24 hours","2 days"],ca:0},
+{en:"Which drug treats hypothyroidism?",fr:"Quel médicament traite l'hypothyroïdie ?",a:["Levothyroxine","Propylthiouracil","Methimazole","Propranolol"],ca:0},
+{en:"What does a CT pulmonary angiogram diagnose?",fr:"Que diagnostique un angioscanner pulmonaire ?",a:["Pulmonary embolism","Pneumonia","Lung cancer","Pleural effusion"],ca:0},
+{en:"Which electrolyte is most important for cardiac rhythm?",fr:"Quel électrolyte est le plus important pour le rythme cardiaque ?",a:["Potassium","Sodium","Calcium","Magnesium"],ca:0},
+]
+},
+year5:{
+label:{en:"YEAR 5 — INTERNAL MEDICINE",fr:"ANNÉE 5 — MÉDECINE INTERNE"},
+qs:[
+{en:"What is the classic triad of Cushing's syndrome?",fr:"Quelle est la triade classique du syndrome de Cushing ?",a:["Central obesity, striae, moon face","Polyuria, polydipsia, weight loss","Edema, proteinuria, hypertension","Fever, rash, arthritis"],ca:0},
+{en:"Which finding on ECG indicates STEMI?",fr:"Quelle anomalie ECG indique un STEMI ?",a:["ST segment elevation","ST depression","T wave inversion","Prolonged PR interval"],ca:0},
+{en:"What is the most common cause of chronic kidney disease?",fr:"Quelle est la cause la plus fréquente de maladie rénale chronique ?",a:["Diabetes mellitus","Hypertension","Glomerulonephritis","Polycystic kidney disease"],ca:0},
+{en:"Which condition is characterized by nephrotic syndrome?",fr:"Quelle affection est caractérisée par un syndrome néphrotique ?",a:["Proteinuria >3.5g/day, edema, hypoalbuminemia","Hematuria, HTN, reduced GFR","Polyuria, glucosuria, amino aciduria","Hypertension, creatinine rise"],ca:0},
+{en:"What is Virchow's triad (predisposing to DVT)?",fr:"Quelle est la triade de Virchow (facteurs de risque de TVP) ?",a:["Stasis, hypercoagulability, endothelial injury","Fever, inflammation, infection","Ischemia, infarction, necrosis","Hemolysis, thrombocytopenia, renal failure"],ca:0},
+{en:"Which arrhythmia shows 'irregularly irregular' rhythm?",fr:"Quelle arythmie montre un rythme « irrégulièrement irrégulier » ?",a:["Atrial fibrillation","Atrial flutter","Ventricular tachycardia","Complete heart block"],ca:0},
+{en:"What is the most common cause of hyperthyroidism?",fr:"Quelle est la cause la plus fréquente d'hyperthyroïdie ?",a:["Graves' disease","Toxic adenoma","Subacute thyroiditis","TSH-secreting adenoma"],ca:0},
+{en:"Which condition presents with triad of jaundice, fever, RUQ pain (Charcot's triad)?",fr:"Quelle affection se présente avec la triade de Charcot ?",a:["Ascending cholangitis","Cholecystitis","Pancreatitis","Hepatitis"],ca:0},
+{en:"What is the key diagnostic feature of rheumatoid arthritis?",fr:"Quel est le critère diagnostique clé de la polyarthrite rhumatoïde ?",a:["Symmetric joint inflammation + morning stiffness","Urate crystals in joint","Sacroiliac joint involvement","Butterfly rash"],ca:0},
+{en:"Which sign indicates meningism (meningeal irritation)?",fr:"Quel signe indique une irritation méningée ?",a:["Kernig's & Brudzinski's signs","Babinski's sign","Chvostek's sign","Trousseau's sign"],ca:0},
+{en:"What is COPD's main risk factor?",fr:"Quel est le principal facteur de risque de la BPCO ?",a:["Smoking","Air pollution","Alpha-1 antitrypsin deficiency","Occupational dust"],ca:0},
+{en:"Which antibody is specific for SLE?",fr:"Quel anticorps est spécifique du lupus érythémateux disséminé ?",a:["Anti-dsDNA","Anti-CCP","Anti-Jo-1","Anti-SSA"],ca:0},
+{en:"What is the most common cause of upper GI bleeding?",fr:"Quelle est la cause la plus fréquente d'hémorragie digestive haute ?",a:["Peptic ulcer disease","Esophageal varices","Mallory-Weiss tear","Angiodysplasia"],ca:0},
+{en:"Which finding is pathognomonic for gout?",fr:"Quel résultat est pathognomonique de la goutte ?",a:["Needle-shaped urate crystals in joint fluid","Rheumatoid factor positive","Anti-CCP antibodies","Calcium pyrophosphate crystals"],ca:0},
+{en:"What is the diagnosis when TSH is low and T4 is high?",fr:"Quel est le diagnostic quand la TSH est basse et T4 est élevée ?",a:["Hyperthyroidism","Hypothyroidism","Euthyroid sick syndrome","Secondary hypothyroidism"],ca:0},
+{en:"Which cancer causes hypercalcemia most commonly?",fr:"Quel cancer cause le plus souvent une hypercalcémie ?",a:["Multiple myeloma & lung cancer","Liver cancer","Stomach cancer","Pancreatic cancer"],ca:0},
+{en:"What is the most common cause of cirrhosis in western countries?",fr:"Quelle est la cause la plus fréquente de cirrhose dans les pays occidentaux ?",a:["Alcohol & NAFLD","Hepatitis B","Hepatitis C","Autoimmune hepatitis"],ca:0},
+{en:"Which class of drug is used to treat asthma long-term?",fr:"Quelle classe médicamenteuse est utilisée au long cours dans l'asthme ?",a:["Inhaled corticosteroids","Oral antibiotics","Oral steroids","IV bronchodilators"],ca:0},
+{en:"What is the Ankle-Brachial Index used for?",fr:"À quoi sert l'index tibio-brachial ?",a:["Peripheral arterial disease","Venous thrombosis","Cardiac output","Pulmonary pressure"],ca:0},
+{en:"Which signs suggest cardiac tamponade (Beck's triad)?",fr:"Quels signes suggèrent une tamponnade cardiaque (triade de Beck) ?",a:["Hypotension, muffled heart sounds, JVD","Fever, tachycardia, loud murmur","Dyspnea, wheeze, hypoxia","Edema, ascites, splenomegaly"],ca:0},
+]
+},
+year6:{
+label:{en:"YEAR 6 — SURGERY & SPECIALTIES",fr:"ANNÉE 6 — CHIRURGIE & SPÉCIALITÉS"},
+qs:[
+{en:"What is the most common hernia in both males and females?",fr:"Quel est le type de hernie le plus courant chez les deux sexes ?",a:["Inguinal hernia","Femoral hernia","Umbilical hernia","Hiatal hernia"],ca:0},
+{en:"Which is the most common cause of small bowel obstruction?",fr:"Quelle est la cause la plus fréquente d'occlusion du grêle ?",a:["Adhesions (post-surgical)","Volvulus","Hernia","Tumor"],ca:0},
+{en:"What is the Apgar score used for?",fr:"À quoi sert le score d'Apgar ?",a:["Newborn assessment at birth","Pediatric trauma scoring","Adult cardiac arrest","Stroke severity"],ca:0},
+{en:"Which complication of acute pancreatitis has the worst prognosis?",fr:"Quelle complication de la pancréatite aiguë a le pire pronostic ?",a:["Infected pancreatic necrosis","Pseudocyst","Pleural effusion","Hypocalcemia"],ca:0},
+{en:"Which nerve is commonly damaged in a humeral shaft fracture?",fr:"Quel nerf est souvent lésé lors d'une fracture de la diaphyse humérale ?",a:["Radial nerve","Ulnar nerve","Median nerve","Axillary nerve"],ca:0},
+{en:"What is the ATLS primary survey in trauma?",fr:"Quel est le bilan primaire ATLS en traumatologie ?",a:["ABCDE (Airway, Breathing, Circulation, Disability, Exposure)","GCS assessment","FAST ultrasound","CT scan"],ca:0},
+{en:"What operation removes the gallbladder?",fr:"Quelle opération enlève la vésicule biliaire ?",a:["Cholecystectomy","Hepatectomy","Splenectomy","Pancreatectomy"],ca:0},
+{en:"Which suture is absorbable?",fr:"Quelle suture est résorbable ?",a:["Vicryl (polyglactin)","Nylon","Prolene","Silk"],ca:0},
+{en:"What is the most common gynecological malignancy in developed countries?",fr:"Quel est le cancer gynécologique le plus fréquent dans les pays développés ?",a:["Endometrial cancer","Ovarian cancer","Cervical cancer","Vulvar cancer"],ca:0},
+{en:"Which cancer is associated with HPV?",fr:"Quel cancer est associé au HPV ?",a:["Cervical cancer","Endometrial cancer","Ovarian cancer","Uterine sarcoma"],ca:0},
+{en:"What is the Gleason score used for?",fr:"À quoi sert le score de Gleason ?",a:["Prostate cancer grading","Colorectal cancer staging","Bladder cancer grading","Renal cancer staging"],ca:0},
+{en:"Which pediatric emergency presents with inspiratory stridor?",fr:"Quelle urgence pédiatrique se présente avec un stridor inspiratoire ?",a:["Croup (laryngotracheobronchitis)","Epiglottitis","Bronchiolitis","Asthma"],ca:0},
+{en:"What is the most common cause of childhood blindness worldwide?",fr:"Quelle est la cause la plus fréquente de cécité infantile dans le monde ?",a:["Vitamin A deficiency","Retinoblastoma","Congenital cataract","Trachoma"],ca:0},
+{en:"Which condition in orthopedics is called 'dinner fork deformity'?",fr:"Quelle condition orthopédique est appelée 'déformation en fourchette' ?",a:["Colles' fracture","Scaphoid fracture","Smith's fracture","Boxer's fracture"],ca:0},
+{en:"What is the treatment for tension pneumothorax?",fr:"Quel est le traitement du pneumothorax sous tension ?",a:["Needle decompression then chest drain","IV antibiotics","Emergency thoracotomy","Inhaled bronchodilators"],ca:0},
+{en:"What is the most common cause of intracerebral hemorrhage?",fr:"Quelle est la cause la plus fréquente d'hémorragie intracérébrale ?",a:["Hypertension","Trauma","AVM","Amyloid angiopathy"],ca:0},
+{en:"Which eye condition causes painless progressive vision loss?",fr:"Quelle maladie oculaire cause une perte de vision progressive indolore ?",a:["Open-angle glaucoma","Acute angle-closure glaucoma","Retinal detachment","Uveitis"],ca:0},
+{en:"What is the most common ENT malignancy?",fr:"Quel est le cancer ORL le plus fréquent ?",a:["Squamous cell carcinoma of larynx","Nasopharyngeal carcinoma","Salivary gland tumor","Sinonasal carcinoma"],ca:0},
+{en:"Which artery is most commonly affected in ischemic stroke?",fr:"Quelle artère est le plus souvent touchée dans l'AVC ischémique ?",a:["Middle cerebral artery (MCA)","Anterior cerebral artery","Basilar artery","Posterior cerebral artery"],ca:0},
+{en:"What is the gold standard for diagnosing coronary artery disease?",fr:"Quel est l'étalon-or pour diagnostiquer la maladie coronarienne ?",a:["Coronary angiography","Stress ECG","Echocardiogram","CT angiography"],ca:0},
+]
+},
+year7:{
+label:{en:"YEAR 7 — CLINICAL MEDICINE & EMERGENCY",fr:"ANNÉE 7 — MÉDECINE CLINIQUE & URGENCES"},
+qs:[
+{en:"A patient with crushing chest pain, diaphoresis, and ST elevation. Diagnosis?",fr:"Patient avec douleur thoracique écrasante, diaphorèse et sus-décalage ST. Diagnostic ?",a:["ST-elevation myocardial infarction (STEMI)","Unstable angina","Pericarditis","Pulmonary embolism"],ca:0},
+{en:"Which condition presents with 'worst headache of life' of sudden onset?",fr:"Quelle affection se présente avec le 'pire mal de tête de la vie' d'apparition soudaine ?",a:["Subarachnoid hemorrhage","Migraine","Tension headache","Meningitis"],ca:0},
+{en:"A patient with fever, rash, neck stiffness. What do you do FIRST?",fr:"Patient avec fièvre, rash, raideur de nuque. Que faites-vous EN PREMIER ?",a:["IV antibiotics then LP","LP then antibiotics","CT then LP","Blood culture only"],ca:0},
+{en:"What is the classic triad of diabetic ketoacidosis (DKA)?",fr:"Quelle est la triade classique de l'acidocétose diabétique ?",a:["Hyperglycemia, high anion gap acidosis, ketonemia","Hypoglycemia, lactic acidosis, ketonuria","Polydipsia, polyuria, weight gain","Confusion, seizures, edema"],ca:0},
+{en:"A 30-year-old male with pleuritic chest pain, tachycardia, haemoptysis after long flight. Diagnosis?",fr:"Homme de 30 ans avec douleur pleurale, tachycardie, hémoptysie après long vol. Diagnostic ?",a:["Pulmonary embolism","Pneumothorax","Pneumonia","Acute MI"],ca:0},
+{en:"What is the first step in managing an unresponsive patient?",fr:"Quelle est la première étape pour un patient inconscient ?",a:["Check for response then call for help","Start CPR immediately","Give IV fluids","Check blood glucose"],ca:0},
+{en:"Sepsis is defined as:",fr:"Le sepsis est défini comme :",a:["Life-threatening organ dysfunction due to dysregulated infection response","Bacteremia + fever","SIRS + infection","High-grade fever with positive blood cultures"],ca:0},
+{en:"What is the Revised Trauma Score used for?",fr:"À quoi sert le Revised Trauma Score ?",a:["Trauma triage and prognosis","ICU sedation","Burns assessment","Pediatric development"],ca:0},
+{en:"Which sign suggests testicular torsion?",fr:"Quel signe suggère une torsion testiculaire ?",a:["Absent cremasteric reflex","Positive transillumination","Scrotal warmth","Penile discharge"],ca:0},
+{en:"A patient with a GCS of 3 has:",fr:"Un patient avec un GCS de 3 présente :",a:["No eye, verbal, or motor response","Moderate brain injury","Mild concussion","Normal brain function"],ca:0},
+{en:"What is the modified Glasgow Coma Scale minimum score?",fr:"Quel est le score minimum de l'échelle de Glasgow modifiée ?",a:["3","0","1","6"],ca:0},
+{en:"A patient presents with FAST positive ultrasound after trauma. Next step?",fr:"Un patient présente un FAST positif après un trauma. Prochaine étape ?",a:["Emergency surgery/exploratory laparotomy","CT scan","Observation","Repeat ultrasound"],ca:0},
+{en:"Which condition causes high anion gap metabolic acidosis (MUDPILES)?",fr:"Quelle affection cause une acidose métabolique avec trou anionique élevé ?",a:["Methanol, Uraemia, DKA, Propylene glycol, INH, Lactic acidosis, Ethanol, Salicylates","COPD exacerbation","Hypoalbuminemia","Contraction alkalosis"],ca:0},
+{en:"What is the immediate treatment for ventricular fibrillation?",fr:"Quel est le traitement immédiat de la fibrillation ventriculaire ?",a:["Defibrillation","Amiodarone","CPR only","Cardioversion"],ca:0},
+{en:"A child with barking cough, stridor, low grade fever. Diagnosis?",fr:"Enfant avec toux aboyante, stridor, fièvre modérée. Diagnostic ?",a:["Viral croup","Epiglottitis","Bacterial tracheitis","Foreign body aspiration"],ca:0},
+{en:"What is the most common cause of acute liver failure in western countries?",fr:"Quelle est la cause la plus fréquente d'insuffisance hépatique aiguë dans les pays occidentaux ?",a:["Paracetamol (acetaminophen) overdose","Hepatitis B","Hepatitis A","Wilson's disease"],ca:0},
+{en:"Which sign indicates increased intracranial pressure?",fr:"Quel signe indique une pression intracrânienne élevée ?",a:["Cushing's triad (HTN, bradycardia, irregular breathing)","Hypotension, tachycardia","Fever, photophobia","Hypoxia, cyanosis"],ca:0},
+{en:"An elderly patient with sudden loss of consciousness, tonic-clonic movements, post-ictal confusion. Diagnosis?",fr:"Patient âgé avec perte de conscience soudaine, mouvements tonico-cloniques, confusion post-critique. Diagnostic ?",a:["Generalized tonic-clonic seizure","Syncope","TIA","Stroke"],ca:0},
+{en:"What is the PORT/PSI score used for?",fr:"À quoi sert le score PORT/PSI ?",a:["Pneumonia severity and disposition","Cardiac arrest survival","GI bleed severity","DVT risk"],ca:0},
+{en:"A patient has pH 7.25, PaCO2 30, HCO3 13. What is the primary disturbance?",fr:"Un patient a pH 7,25, PaCO2 30, HCO3 13. Quelle est la perturbation primaire ?",a:["Metabolic acidosis with respiratory compensation","Respiratory acidosis","Metabolic alkalosis","Mixed disorder"],ca:0},
+]
+}
+};
+// ============================================================
+// TRANSLATIONS
+// ============================================================
+const T = {
+en:{
+year:"YEAR",level:"LEVEL",score:"SCORE",paused:"PAUSED",resume:"RESUME",
+restart:"RESTART LEVEL",quit:"QUIT",skip:"SKIP (10s)",yearComplete:"YEAR COMPLETE!",
+nextYear:"CONTINUE",congrats:"Congratulations! You have completed",
+doctor:"Year of Medical School!",
+certTitle:"IS OFFICIALLY A DOCTOR OF MEDICINE",
+certSchool:"DOCTOR QUEST MEDICAL SCHOOL",
+certPresents:"THIS CERTIFIES THAT",
+certBody:"Having successfully completed seven years of rigorous medical education encompassing anatomy, physiology, biochemistry, pathology, microbiology, immunology, pharmacology, clinical medicine, and surgical sciences.",
+sigDean:"DEAN OF MEDICINE",sigReg:"MEDICAL REGISTRAR",
+saveCert:"SAVE CERTIFICATE",playAgain:"PLAY AGAIN",
+graduates:"GRADUATES",
+howToPlay:"Navigate the maze with arrow keys or WASD. Answer 3 medical questions per level. Find the green exit to advance!",
+langBtn:"LANGUAGE: ENGLISH",startBtn:"BEGIN MEDICAL SCHOOL",howBtn:"HOW TO PLAY",
+correct:"✓ CORRECT!",wrong:"✗ INCORRECT",
+narrator1:"Find the green exit to advance!",
+narrator2:"Answer questions to unlock the exit!",
+narrator3:"Year ",narrator4:" Level ",
+exitLocked:"Answer all 3 questions to unlock the exit!",
+exitOpen:"EXIT UNLOCKED — Reach the green square!",
+yearComp1:"You have completed Year ",yearComp2:" of Medical School!",
+},
+fr:{
+year:"ANNÉE",level:"NIVEAU",score:"SCORE",paused:"PAUSE",resume:"REPRENDRE",
+restart:"RECOMMENCER",quit:"QUITTER",skip:"PASSER (10s)",yearComplete:"ANNÉE TERMINÉE !",
+nextYear:"CONTINUER",congrats:"Félicitations ! Vous avez terminé l'",
+doctor:"Année de l'École de Médecine !",
+certTitle:"EST OFFICIELLEMENT DOCTEUR EN MÉDECINE",
+certSchool:"ÉCOLE DE MÉDECINE DOCTOR QUEST",
+certPresents:"LE PRÉSENT CERTIFICAT ATTESTE QUE",
+certBody:"Ayant réussi sept ans d'enseignement médical rigoureux comprenant l'anatomie, la physiologie, la biochimie, la pathologie, la microbiologie, l'immunologie, la pharmacologie, la médecine clinique et les sciences chirurgicales.",
+sigDean:"DOYEN DE MÉDECINE",sigReg:"REGISTRAIRE MÉDICAL",
+saveCert:"ENREGISTRER",playAgain:"REJOUER",
+graduates:"DIPLÔMÉS",
+howToPlay:"Naviguez le labyrinthe avec les flèches ou ZQSD. Répondez à 3 questions médicales par niveau. Trouvez la sortie verte pour avancer !",
+langBtn:"LANGUE : FRANÇAIS",startBtn:"COMMENCER L'ÉCOLE",howBtn:"COMMENT JOUER",
+correct:"✓ CORRECT !",wrong:"✗ INCORRECT",
+narrator1:"Trouvez la sortie verte pour avancer !",
+narrator2:"Répondez aux questions pour débloquer la sortie !",
+narrator3:"Année ",narrator4:" Niveau ",
+exitLocked:"Répondez aux 3 questions pour débloquer la sortie !",
+exitOpen:"SORTIE DÉVERROUILLÉE — Atteignez le carré vert !",
+yearComp1:"Vous avez terminé l'Année ",yearComp2:" de l'École de Médecine !",
+},
+};
+// ============================================================
+// GAME STATE
+// ============================================================
+const g = {
+canvas:null,ctx:null,W:0,H:0,
+cs:32, // cell size - reduced for mobile
+running:false,paused:false,
+year:1,level:1,
+answered:0, // correct this level
+score:0,
+maze:[],mazeW:0,mazeH:0,
+exit:{x:0,y:0},
+// Player
+px:1,py:1,          // grid pos
+rx:0,ry:0,          // render pixel pos (for smooth anim)
+tx:0,ty:0,          // target pixel pos
+moving:false,
+moveDir:null,
+moveProgress:0,
+// Robot animation
+robotFrame:0,robotTimer:0,
+eyeOffset:0,eyeTimer:0,
+// Questions
+pool:[],             // remaining questions this year
+exitLocked:true,
+questionShowing:false,
+skipTimer:0,
+skipMax:10000,
+// Particles
+particles:[],
+// Keys
+keys:{},
+// Touch controls
+touchDir:{x:0,y:0},
+// Misc
+lang:'en',
+graduated:parseInt(localStorage.getItem('dq_grad'))||0,
+lastTime:0,raf:null,
+cellOffX:0,cellOffY:0,
+// Tiles: 0=path,1=wall,2=question-spot
+questionSpots:[],
+triggeredSpots:new Set(),
+};
+// ============================================================
+// CANVAS
+// ============================================================
+function initCanvas(){
+g.canvas=document.getElementById('c');
+g.ctx=g.canvas.getContext('2d');
+resize();
+window.addEventListener('resize',resize);
+}
+function resize(){
+g.W=window.innerWidth;g.H=window.innerHeight;
+g.canvas.width=g.W;g.canvas.height=g.H;
+if(g.running)recalcOffsets();
+}
+function recalcOffsets(){
+g.cellOffX=Math.floor((g.W - g.mazeW*g.cs)/2);
+g.cellOffY=Math.floor((g.H - g.mazeH*g.cs)/2)+10;
+}
+// ============================================================
+// MAZE GENERATION (recursive backtracker)
+// ============================================================
+function genMaze(){
+// Size scales with year/level — harder as game progresses
+const base = 19 + (g.year-1)*2 + (g.level-1);
+const w = Math.min(base, Math.floor((g.W-40)/g.cs));
+const h = Math.min(base, Math.floor((g.H-80)/g.cs));
+// Must be odd
+const mw = w%2===0?w-1:w;
+const mh = h%2===0?h-1:h;
+g.mazeW=mw;g.mazeH=mh;
+const maze = Array.from({length:mh},()=>new Array(mw).fill(1));
+// Recursive backtracker
+const carve=(x,y)=>{
+maze[y][x]=0;
+const dirs=[[0,-2],[2,0],[0,2],[-2,0]].sort(()=>Math.random()-.5);
+for(const[dx,dy]of dirs){
+const nx=x+dx,ny=y+dy;
+if(nx>0&&nx<mw-1&&ny>0&&ny<mh-1&&maze[ny][nx]===1){
+maze[y+dy/2][x+dx/2]=0;
+carve(nx,ny);
+}
+}
+};
+carve(1,1);
+// Add extra paths for complexity
+for(let i=0;i<Math.floor(mw*mh*0.04);i++){
+const rx=1+Math.floor(Math.random()*(mw-2));
+const ry=1+Math.floor(Math.random()*(mh-2));
+if(rx%2===0&&ry%2===0)maze[ry][rx]=0;
+}
+// Place exit far from start
+g.exit.x=mw-2;g.exit.y=mh-2;
+maze[g.exit.y][g.exit.x]=0;
+// Place question spots on path cells
+g.questionSpots=[];g.triggeredSpots=new Set();
+const pathCells=[];
+for(let y=0;y<mh;y++)for(let x=0;x<mw;x++)
+if(maze[y][x]===0&&!(x===1&&y===1)&&!(x===g.exit.x&&y===g.exit.y))
+pathCells.push({x,y});
+// Shuffle and pick spots distributed across maze
+pathCells.sort(()=>Math.random()-.5);
+const numSpots=12+g.year*2;
+for(let i=0;i<Math.min(numSpots,pathCells.length);i++)
+g.questionSpots.push(pathCells[i]);
+g.maze=maze;
+recalcOffsets();
+}
+// ============================================================
+// LOAD LEVEL
+// ============================================================
+function loadLevel(){
+genMaze();
+g.px=1;g.py=1;
+g.rx=cellToPixX(1);g.ry=cellToPixY(1);
+g.tx=g.rx;g.ty=g.ry;
+g.moving=false;g.moveDir=null;g.moveProgress=0;
+g.answered=0;g.exitLocked=true;
+g.particles=[];
+updateDots();
+updateHUD();
+// Rebuild question pool for this year
+const yearKey='year'+g.year;
+const src=DB[yearKey]||DB.year1;
+g.pool=[...src.qs].sort(()=>Math.random()-.5);
+showNarrator(t('narrator3')+g.year+t('narrator4')+g.level+' — '+t('narrator1'));
+}
+function cellToPixX(x){return g.cellOffX+x*g.cs+2}
+function cellToPixY(y){return g.cellOffY+y*g.cs+2}
+// ============================================================
+// PLAYER MOVEMENT (smooth interpolated)
+// ============================================================
+const MOVE_SPEED=0.14; // slightly faster for mobile
+function tryMove(dx,dy){
+if(g.moving||g.questionShowing||g.paused||!g.running)return;
+const nx=g.px+dx,ny=g.py+dy;
+if(nx<0||ny<0||nx>=g.mazeW||ny>=g.mazeH)return;
+if(g.maze[ny][nx]!==0)return;
+g.px=nx;g.py=ny;
+g.tx=cellToPixX(nx);g.ty=cellToPixY(ny);
+g.moving=true;g.moveProgress=0;
+g.moveDir={dx,dy};
+}
+function updateMovement(dt){
+if(!g.moving)return;
+g.moveProgress+=MOVE_SPEED*(dt/16.67);
+if(g.moveProgress>=1){
+g.moveProgress=1;g.moving=false;
+g.rx=g.tx;g.ry=g.ty;
+checkCell();
+}else{
+g.rx=lerp(g.rx,g.tx,g.moveProgress);
+g.ry=lerp(g.ry,g.ty,g.moveProgress);
+}
+}
+function lerp(a,b,t){return a+(b-a)*t}
+function checkCell(){
+// Check exit
+if(g.px===g.exit.x&&g.py===g.exit.y){
+if(!g.exitLocked){levelComplete();return;}
+else showNarrator(t('exitLocked'));
+}
+// Check question spots
+const spotKey=g.px+','+g.py;
+if(!g.triggeredSpots.has(spotKey)){
+const spot=g.questionSpots.find(s=>s.x===g.px&&s.y===g.py);
+if(spot&&g.answered<3){
+g.triggeredSpots.add(spotKey);
+setTimeout(()=>showQuestion(),200);
+}
+}
+}
+// ============================================================
+// QUESTION SYSTEM
+// ============================================================
+function showQuestion(){
+if(g.answered>=3||g.questionShowing)return;
+if(g.pool.length===0){
+const yearKey='year'+g.year;
+g.pool=[...DB[yearKey].qs].sort(()=>Math.random()-.5);
+}
+const q=g.pool.pop();
+g.questionShowing=true;
+const lang=g.lang;
+const yearKey='year'+g.year;
+document.getElementById('qTitle').textContent=t('questionTitle')||'MEDICAL QUESTION';
+document.getElementById('qBadge').textContent=DB[yearKey].label[lang];
+document.getElementById('qText').textContent=lang==='en'?q.en:q.fr;
+const opts=document.getElementById('qOpts');
+opts.innerHTML='';
+q.a.forEach((opt,i)=>{
+const btn=document.createElement('button');
+btn.className='q-btn';
+btn.textContent=(i===0?'A. ':i===1?'B. ':i===2?'C. ':'D. ')+opt;
+btn.onclick=()=>handleAnswer(i,q.ca,btn,opts,q);
+opts.appendChild(btn);
+});
+document.getElementById('qFb').textContent='';
+document.getElementById('qFb').style.color='';
+document.getElementById('skipBtn').textContent=t('skip');
+g.skipTimer=g.skipMax;
+document.getElementById('skipBar').style.width='100%';
+document.getElementById('qPanel').classList.add('active');
+spawnParticles(g.rx+g.cs/2,g.ry+g.cs/2,'#00e5ff',8);
+}
+function handleAnswer(selected,correct,clickedBtn,optsEl,q){
+if(clickedBtn.disabled)return;
+// Disable all
+Array.from(optsEl.children).forEach(b=>b.disabled=true);
+const fb=document.getElementById('qFb');
+if(selected===correct){
+clickedBtn.classList.add('correct');
+fb.textContent=t('correct');
+fb.style.color='var(--green)';
+g.answered++;g.score+=100*g.year;
+spawnParticles(g.W/2,g.H/2,'#2ecc71',20);
+updateDots();updateHUD();
+setTimeout(()=>{
+closeQuestion();
+if(g.answered>=3){
+g.exitLocked=false;
+showNarrator(t('exitOpen'));
+spawnParticles(g.cellOffX+g.exit.x*g.cs+g.cs/2,g.cellOffY+g.exit.y*g.cs+g.cs/2,'#2ecc71',30);
+}
+},1200);
+}else{
+clickedBtn.classList.add('wrong');
+optsEl.children[correct].classList.add('correct');
+fb.textContent=t('wrong');
+fb.style.color='var(--red)';
+g.score=Math.max(0,g.score-20);
+spawnParticles(g.rx+g.cs/2,g.ry+g.cs/2,'#e74c3c',12);
+updateHUD();
+setTimeout(()=>closeQuestion(),2200);
+}
+}
+function closeQuestion(){
+document.getElementById('qPanel').classList.remove('active');
+g.questionShowing=false;
+g.skipTimer=0;
+}
+// ============================================================
+// LEVEL / YEAR COMPLETE
+// ============================================================
+function levelComplete(){
+if(g.level<7){
+g.level++;
+loadLevel();
+spawnParticles(g.W/2,g.H/2,'#f1c40f',30);
+}else{
+yearComplete();
+}
+}
+function yearComplete(){
+g.running=false;
+const panel=document.getElementById('yearComp');
+const tl=document.getElementById('ycTitle');
+const tx=document.getElementById('ycText');
+const btn=document.getElementById('nextYrBtn');
+if(g.year===7){
+tl.textContent=g.lang==='en'?'CONGRATULATIONS!':'FÉLICITATIONS !';
+tx.textContent=g.lang==='en'?'You have completed ALL 7 years of Medical School! You are now a Doctor!':"Vous avez terminé les 7 années d'École de Médecine ! Vous êtes maintenant Docteur !";
+btn.textContent=g.lang==='en'?'RECEIVE CERTIFICATE':'RECEVOIR LE CERTIFICAT';
+}else{
+tl.textContent=`${t('year')} ${g.year} ${t('yearComplete')}`;
+tx.textContent=t('yearComp1')+g.year+t('yearComp2');
+btn.textContent=t('nextYear')+' '+(g.lang==='en'?'Year ':'Année ')+(g.year+1);
+}
+panel.classList.add('active');
+}
+function showCertificate(){
+document.getElementById('yearComp').classList.remove('active');
+document.getElementById('certScreen').classList.add('active');
+document.getElementById('certSchool').textContent=t('certSchool');
+document.getElementById('certPresents').textContent=t('certPresents');
+document.getElementById('certTL').textContent=t('certTitle');
+document.getElementById('certBody').textContent=t('certBody');
+document.getElementById('sigDean').textContent=t('sigDean');
+document.getElementById('sigReg').textContent=t('sigReg');
+document.getElementById('certName').textContent='DR. GRADUATE';
+const now=new Date();
+document.getElementById('certDate').textContent=now.toLocaleDateString(g.lang==='en'?'en-US':'fr-FR',{year:'numeric',month:'long',day:'numeric'});
+g.graduated++;
+localStorage.setItem('dq_grad',g.graduated);
+document.getElementById('gradCount').textContent=g.graduated;
+}
+// ============================================================
+// PARTICLE SYSTEM
+// ============================================================
+function spawnParticles(x,y,color,count){
+for(let i=0;i<count;i++){
+const angle=Math.random()*Math.PI*2;
+const speed=1+Math.random()*4;
+g.particles.push({
+x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed-1,
+life:1,decay:.018+Math.random()*.025,
+size:2+Math.random()*5,color
+});
+}
+}
+function updateParticles(dt){
+const f=dt/16.67;
+g.particles=g.particles.filter(p=>{
+p.x+=p.vx*f;p.y+=p.vy*f;p.vy+=0.12*f;
+p.life-=p.decay*f;
+return p.life>0;
+});
+}
+function drawParticles(){
+const ctx=g.ctx;
+g.particles.forEach(p=>{
+ctx.save();
+ctx.globalAlpha=p.life;
+ctx.fillStyle=p.color;
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);
+ctx.fill();
+ctx.restore();
+});
+}
+// ============================================================
+// ROBOT DRAWING
+// ============================================================
+function drawRobot(ctx,x,y,size){
+const s=size;
+const cx=x+s/2,cy=y+s/2;
+g.robotTimer++;
+if(g.robotTimer%18===0)g.robotFrame=(g.robotFrame+1)%4;
+const bobY=Math.sin(g.robotFrame*Math.PI/2)*1.5;
+const legSwing=Math.sin(g.robotFrame*Math.PI/2)*3;
+g.eyeTimer++;
+if(g.eyeTimer>90+Math.random()*60){
+g.eyeOffset=Math.random()<.5?1:-1;
+g.eyeTimer=0;
+}
+const ey=g.eyeOffset;
+ctx.save();
+ctx.translate(cx, cy+bobY);
+// Shadow
+ctx.save();
+ctx.globalAlpha=0.3;
+ctx.fillStyle='#000';
+ctx.beginPath();
+ctx.ellipse(0,s*.38,s*.28,s*.08,0,0,Math.PI*2);
+ctx.fill();
+ctx.restore();
+// Legs
+ctx.fillStyle='#1a6090';
+const legH=s*.22;
+const legW=s*.13;
+ctx.fillRect(-s*.19+legSwing*.5, s*.2, legW, legH);
+ctx.fillRect( s*.06-legSwing*.5, s*.2, legW, legH);
+// Feet
+ctx.fillStyle='#0d4060';
+ctx.fillRect(-s*.22+legSwing*.5, s*.38, s*.18, s*.07);
+ctx.fillRect( s*.04-legSwing*.5, s*.38, s*.18, s*.07);
+// Body
+const grad=ctx.createLinearGradient(-s*.28,-s*.15,s*.28,s*.22);
+grad.addColorStop(0,'#4a9fd4');
+grad.addColorStop(.5,'#2a7ab4');
+grad.addColorStop(1,'#1a5a94');
+ctx.fillStyle=grad;
+ctx.beginPath();
+ctx.roundRect(-s*.28,-s*.15,s*.56,s*.38,s*.06);
+ctx.fill();
+// Body highlight
+ctx.fillStyle='rgba(255,255,255,0.15)';
+ctx.beginPath();
+ctx.roundRect(-s*.24,-s*.12,s*.2,s*.1,s*.03);
+ctx.fill();
+// Chest cross (medical)
+ctx.fillStyle='#e74c3c';
+ctx.fillRect(-s*.04,s*.0,s*.08,s*.16);
+ctx.fillRect(-s*.1,s*.05,s*.2,s*.06);
+// Arms
+ctx.fillStyle='#1a6090';
+// Left arm
+ctx.save();
+ctx.translate(-s*.3,-s*.05);
+ctx.rotate(Math.sin(g.robotFrame*Math.PI/2)*.25);
+ctx.fillRect(-s*.1,0,s*.1,s*.25);
+// Left hand
+ctx.fillStyle='#0d4060';
+ctx.beginPath();ctx.arc(-s*.05,s*.28,s*.08,0,Math.PI*2);ctx.fill();
+ctx.restore();
+// Right arm
+ctx.save();
+ctx.translate(s*.3,-s*.05);
+ctx.rotate(-Math.sin(g.robotFrame*Math.PI/2)*.25);
+ctx.fillRect(0,0,s*.1,s*.25);
+ctx.fillStyle='#0d4060';
+ctx.beginPath();ctx.arc(s*.05,s*.28,s*.08,0,Math.PI*2);ctx.fill();
+ctx.restore();
+// Neck
+ctx.fillStyle='#1a5a94';
+ctx.fillRect(-s*.08,-s*.22,s*.16,s*.09);
+// Head
+const hgrad=ctx.createLinearGradient(-s*.25,-s*.48,s*.25,-s*.2);
+hgrad.addColorStop(0,'#5ab0e0');
+hgrad.addColorStop(1,'#2a80c0');
+ctx.fillStyle=hgrad;
+ctx.beginPath();
+ctx.roundRect(-s*.25,-s*.48,s*.5,s*.29,s*.08);
+ctx.fill();
+// Head top detail
+ctx.fillStyle='#1a6090';
+ctx.fillRect(-s*.08,-s*.52,s*.16,s*.06);
+ctx.beginPath();ctx.arc(0,-s*.52,s*.06,0,Math.PI*2);
+ctx.fillStyle='#f1c40f';ctx.fill();
+// Antenna
+ctx.strokeStyle='#0a3a60';ctx.lineWidth=2;
+ctx.beginPath();ctx.moveTo(0,-s*.52);ctx.lineTo(0,-s*.62);ctx.stroke();
+const blinkOn=(g.robotTimer%40<35);
+ctx.beginPath();ctx.arc(0,-s*.64,s*.04,0,Math.PI*2);
+ctx.fillStyle=blinkOn?'#e74c3c':'#7a1010';ctx.fill();
+// Eyes
+ctx.fillStyle='#050512';
+ctx.beginPath();ctx.roundRect(-s*.18+ey,-s*.4,s*.14,s*.1,s*.03);ctx.fill();
+ctx.beginPath();ctx.roundRect(s*.04+ey,-s*.4,s*.14,s*.1,s*.03);ctx.fill();
+// Eye glow (cyan)
+ctx.fillStyle='#00e5ff';
+ctx.globalAlpha=0.9;
+ctx.beginPath();ctx.arc(-s*.11+ey,-s*.35,s*.04,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc( s*.11+ey,-s*.35,s*.04,0,Math.PI*2);ctx.fill();
+ctx.globalAlpha=0.4;
+ctx.beginPath();ctx.arc(-s*.11+ey,-s*.35,s*.025,0,Math.PI*2);ctx.fill();
+ctx.beginPath();ctx.arc( s*.11+ey,-s*.35,s*.025,0,Math.PI*2);ctx.fill();
+ctx.globalAlpha=1;
+// Mouth
+ctx.strokeStyle='#0a3a60';ctx.lineWidth=1.5;
+ctx.beginPath();
+ctx.moveTo(-s*.1,-s*.26);ctx.lineTo(-s*.03,-s*.22);
+ctx.lineTo(s*.03,-s*.22);ctx.lineTo(s*.1,-s*.26);
+ctx.stroke();
+ctx.restore();
+}
+// ============================================================
+// RENDER MAZE
+// ============================================================
+function drawMaze(){
+const ctx=g.ctx,cs=g.cs;
+const ox=g.cellOffX,oy=g.cellOffY;
+const mw=g.mazeW,mh=g.mazeH;
+const maze=g.maze;
+// Background under maze
+ctx.fillStyle='#0a0a14';
+ctx.fillRect(ox,oy,mw*cs,mh*cs);
+// Wall gradient map
+for(let y=0;y<mh;y++){
+for(let x=0;x<mw;x++){
+const px=ox+x*cs,py=oy+y*cs;
+if(maze[y][x]===1){
+// Wall
+ctx.fillStyle='#1a1a30';
+ctx.fillRect(px,py,cs,cs);
+// Inner bevel
+ctx.fillStyle='#141428';
+ctx.fillRect(px+1,py+1,cs-2,cs-2);
+// Top/left highlight
+ctx.fillStyle='#222240';
+ctx.fillRect(px+1,py+1,cs-2,1);
+ctx.fillRect(px+1,py+1,1,cs-2);
+}else{
+// Floor
+ctx.fillStyle=(x+y)%2===0?'#0d0d1c':'#0f0f1f';
+ctx.fillRect(px,py,cs,cs);
+// Floor grid
+ctx.strokeStyle='rgba(30,30,60,0.5)';
+ctx.lineWidth=.5;
+ctx.strokeRect(px+.5,py+.5,cs-1,cs-1);
+}
+}
+}
+// Question spots (subtle glow)
+g.questionSpots.forEach(sp=>{
+const key=sp.x+','+sp.y;
+if(g.triggeredSpots.has(key))return;
+if(g.answered>=3)return;
+const px=ox+sp.x*cs,py=oy+sp.y*cs;
+const pulse=0.3+0.2*Math.sin(Date.now()*0.004);
+ctx.fillStyle=`rgba(52,152,219,${pulse})`;
+ctx.fillRect(px+3,py+3,cs-6,cs-6);
+// '?' mark
+ctx.fillStyle=`rgba(0,229,255,${pulse+0.2})`;
+ctx.font=`bold ${cs*.45}px var(--mono)`;
+ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText('?',px+cs/2,py+cs/2+1);
+});
+ctx.textAlign='left';ctx.textBaseline='alphabetic';
+// Exit
+const ex=ox+g.exit.x*cs,ey=oy+g.exit.y*cs;
+if(g.exitLocked){
+const lp=0.6+0.2*Math.sin(Date.now()*0.003);
+ctx.fillStyle=`rgba(231,76,60,${lp*0.6})`;
+ctx.fillRect(ex,ey,cs,cs);
+ctx.strokeStyle=`rgba(231,76,60,${lp})`;
+ctx.lineWidth=2;ctx.strokeRect(ex+1,ey+1,cs-2,cs-2);
+ctx.fillStyle=`rgba(231,76,60,${lp+0.1})`;
+ctx.font=`bold ${cs*.5}px var(--mono)`;
+ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText('🔒',ex+cs/2,ey+cs/2);
+}else{
+const gp=0.5+0.3*Math.sin(Date.now()*0.005);
+ctx.fillStyle=`rgba(46,204,113,${gp})`;
+ctx.fillRect(ex,ey,cs,cs);
+// Glow
+ctx.shadowColor='#2ecc71';ctx.shadowBlur=16;
+ctx.strokeStyle='#2ecc71';ctx.lineWidth=2;
+ctx.strokeRect(ex+1,ey+1,cs-2,cs-2);
+ctx.shadowBlur=0;
+ctx.fillStyle='#fff';
+ctx.font=`bold ${cs*.55}px var(--mono)`;
+ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText('▶',ex+cs/2,ey+cs/2);
+}
+ctx.textAlign='left';ctx.textBaseline='alphabetic';
+}
+// ============================================================
+// MAIN RENDER
+// ============================================================
+function render(){
+const ctx=g.ctx;
+ctx.clearRect(0,0,g.W,g.H);
+// Bg gradient
+const bg=ctx.createRadialGradient(g.W/2,g.H*.6,0,g.W/2,g.H/2,g.W*.8);
+bg.addColorStop(0,'#0d0d1e');bg.addColorStop(1,'#07070f');
+ctx.fillStyle=bg;ctx.fillRect(0,0,g.W,g.H);
+if(!g.running)return;
+drawMaze();
+drawParticles();
+// Robot
+const rs=g.cs-2;
+drawRobot(ctx,g.rx,g.ry,rs);
+}
+// ============================================================
+// GAME LOOP
+// ============================================================
+function loop(ts){
+if(!g.running){g.raf=null;return;}
+const dt=Math.min(100,ts-g.lastTime);g.lastTime=ts;
+if(!g.paused){
+handleInput();
+updateMovement(dt);
+updateParticles(dt);
+// Skip timer
+if(g.questionShowing&&g.skipTimer>0){
+g.skipTimer-=dt;
+const pct=Math.max(0,g.skipTimer/g.skipMax*100);
+document.getElementById('skipBar').style.width=pct+'%';
+if(g.skipTimer<=0)closeQuestion();
+}
+}
+render();
+g.raf=requestAnimationFrame(loop);
+}
+// ============================================================
+// INPUT - ENHANCED FOR MOBILE
+// ============================================================
+function handleInput(){
+if(g.moving||g.questionShowing)return;
+// Keyboard input
+if(g.keys['ArrowUp']||g.keys['w']||g.keys['z'])tryMove(0,-1);
+else if(g.keys['ArrowDown']||g.keys['s'])tryMove(0,1);
+else if(g.keys['ArrowLeft']||g.keys['a']||g.keys['q'])tryMove(-1,0);
+else if(g.keys['ArrowRight']||g.keys['d'])tryMove(1,0);
+// Touch input (D-pad)
+if(g.touchDir.y<0)tryMove(0,-1);
+else if(g.touchDir.y>0)tryMove(0,1);
+else if(g.touchDir.x<0)tryMove(-1,0);
+else if(g.touchDir.x>0)tryMove(1,0);
+}
+document.addEventListener('keydown',e=>{
+g.keys[e.key]=true;
+if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))e.preventDefault();
+});
+document.addEventListener('keyup',e=>delete g.keys[e.key]);
+// D-pad touch controls
+['dpU','dpD','dpL','dpR'].forEach((id,i)=>{
+const el=document.getElementById(id);
+const moves=[[0,-1],[0,1],[-1,0],[1,0]][i];
+let touchActive=false;
+el.addEventListener('pointerdown',()=>{
+touchActive=true;
+if(g.running&&!g.questionShowing)g.touchDir={x:moves[0],y:moves[1]};
+});
+el.addEventListener('pointerup',()=>{touchActive=false;g.touchDir={x:0,y:0};});
+el.addEventListener('pointerleave',()=>{if(touchActive){touchActive=false;g.touchDir={x:0,y:0};}});
+});
+// ============================================================
+// UI HELPERS
+// ============================================================
+function t(key){return T[g.lang][key]||T.en[key]||key}
+function showNarrator(txt){
+const el=document.getElementById('narrator');
+el.textContent=txt;el.style.opacity='1';
+clearTimeout(el._t);
+el._t=setTimeout(()=>{if(el.textContent===txt)el.style.opacity='0';},4500);
+}
+function updateHUD(){
+document.getElementById('vYear').textContent=g.year;
+document.getElementById('vLevel').textContent=g.level;
+document.getElementById('vScore').textContent=g.score;
+const pct=((g.year-1)*7+(g.level-1)+(g.answered/3))/(7*7)*100;
+document.getElementById('progFill').style.width=Math.min(100,pct)+'%';
+}
+function updateDots(){
+for(let i=0;i<3;i++){
+const d=document.getElementById('d'+i);
+d.classList.toggle('lit',i<g.answered);
+}
+}
+// ============================================================
+// INIT GAME
+// ============================================================
+function startGame(){
+document.getElementById('title').style.opacity='0';
+setTimeout(()=>document.getElementById('title').classList.add('hidden'),600);
+g.year=1;g.level=1;g.answered=0;g.score=0;g.running=true;g.paused=false;
+loadLevel();
+g.rx=cellToPixX(g.px);g.ry=cellToPixY(g.py);
+if(g.raf)cancelAnimationFrame(g.raf);
+g.lastTime=performance.now();
+g.raf=requestAnimationFrame(loop);
+}
+// ============================================================
+// EVENTS
+// ============================================================
+document.addEventListener('DOMContentLoaded',()=>{
+initCanvas();
+document.getElementById('gradCount').textContent=g.graduated;
+// Title buttons
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('langBtn').addEventListener('click',()=>{
+g.lang=g.lang==='en'?'fr':'en';
+document.getElementById('langBtn').textContent=t('langBtn');
+document.getElementById('startBtn').textContent=t('startBtn');
+document.getElementById('howBtn').textContent=t('howBtn');
+document.getElementById('gradCount').textContent=g.graduated;
+});
+document.getElementById('howBtn').addEventListener('click',()=>{
+alert(t('howToPlay'));
+});
+// Pause
+document.getElementById('pauseBtn').addEventListener('click',()=>{
+if(!g.running)return;
+g.paused=!g.paused;
+document.getElementById('pauseMenu').classList.toggle('active',g.paused);
+document.getElementById('pTitle').textContent=t('paused');
+document.getElementById('resumeBtn').textContent=t('resume');
+document.getElementById('rstBtn').textContent=t('restart');
+document.getElementById('quitBtn').textContent=t('quit');
+});
+document.getElementById('resumeBtn').addEventListener('click',()=>{
+g.paused=false;document.getElementById('pauseMenu').classList.remove('active');
+});
+document.getElementById('rstBtn').addEventListener('click',()=>{
+g.paused=false;document.getElementById('pauseMenu').classList.remove('active');
+loadLevel();
+g.rx=cellToPixX(g.px);g.ry=cellToPixY(g.py);
+if(!g.raf){g.lastTime=performance.now();g.raf=requestAnimationFrame(loop);}
+});
+document.getElementById('quitBtn').addEventListener('click',()=>{
+g.running=false;g.paused=false;
+document.getElementById('pauseMenu').classList.remove('active');
+document.getElementById('title').classList.remove('hidden');
+document.getElementById('title').style.opacity='1';
+if(g.raf){cancelAnimationFrame(g.raf);g.raf=null;}
+});
+// Skip question
+document.getElementById('skipBtn').addEventListener('click',closeQuestion);
+// Year complete
+document.getElementById('nextYrBtn').addEventListener('click',()=>{
+document.getElementById('yearComp').classList.remove('active');
+if(g.year===7){showCertificate();return;}
+g.year++;g.level=1;g.answered=0;g.running=true;
+loadLevel();
+g.rx=cellToPixX(g.px);g.ry=cellToPixY(g.py);
+if(g.raf)cancelAnimationFrame(g.raf);
+g.lastTime=performance.now();
+g.raf=requestAnimationFrame(loop);
+});
+// Certificate
+document.getElementById('dlBtn').addEventListener('click',()=>{
+alert(g.lang==='en'?'🎓 Certificate saved! You are officially a Doctor!':'🎓 Certificat enregistré ! Vous êtes officiellement Docteur !');
+});
+document.getElementById('playAgainBtn').addEventListener('click',()=>{
+document.getElementById('certScreen').classList.remove('active');
+document.getElementById('title').classList.remove('hidden');
+document.getElementById('title').style.opacity='1';
+});
+// Draw idle frame immediately
+render();
+});
+</script>
 </body>
 </html>
+
